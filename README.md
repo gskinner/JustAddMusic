@@ -36,7 +36,7 @@ new JustAddMusic({
 });
 ```
 
-You can view a live example of this on [https://codepen.io/gskinner/pen/EmgQyO](CodePen).
+You can view a live example of this on [CodePen](https://codepen.io/gskinner/pen/EmgQyO).
 
 
 ## Constructor
