@@ -1,5 +1,6 @@
 var gulp = require("gulp");
 var babel = require("gulp-babel");
+var minify = require("gulp-minify");
 
 gulp.task("default", ["build", "watch"]);
 
