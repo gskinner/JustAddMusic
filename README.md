@@ -31,7 +31,7 @@ new JustAddMusic({
 	src: "myMusic.mp3",
 	ontick: function(o) {
 		var l = Math.round(o.avg * 100);
-		document.body.style.background = "hsl(90,100,"+l+"")";
+		document.body.style.background = "hsl(90,100,"+l+")";
 	}
 });
 ```
