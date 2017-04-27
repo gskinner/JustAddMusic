@@ -226,8 +226,10 @@ class JustAddMusic {
 		o.avg = sum/count;
 		o.delta = deltaO ? val-deltaO.vol : 0;
 		o.avgDelta = deltaO ? o.avg-deltaO.avg : 0;
-		
-		
+		o.bass = Math.abs(this._compressorBass.reduction)/12;
+		o.treble = Math.abs(this._compressorTreble.reduction)/12;
+		o.optical = Math.abs(this._compressorBass.reduction+this._compressorTreble.reduction)/12;
+
 		this.ontick&&this.ontick(o);
 		return o;
 	};
@@ -241,21 +243,58 @@ class JustAddMusic {
 		this._context = new (window.AudioContext||window.webkitAudioContext)();
 		this._gainNode = this._context.createGain();
 		this._gainNode.connect(this._context.destination);
+
+		this._mute = this._context.createGain();
+		this._mute.gain.value = 0;
+		this._mute.connect(this._context.destination);
+
+		this._compressorBass = this._context.createDynamicsCompressor();
+		this._compressorBass.threshold.value = -36;
+		this._compressorBass.ratio.value = 2;
+		this._compressorBass.attack.value = 0;
+		this._compressorBass.release.value = 0.1;
+
+		this._compressorBass.connect(this._mute);
+
+		this._bandpassBass = this._context.createBiquadFilter();
+		this._bandpassBass.type = "bandpass";
+		this._bandpassBass.frequency.value = 125;		
+		this._bandpassBass.connect(this._compressorBass);
+
+		this._gainNode.connect(this._bandpassBass);
+
+		this._compressorTreble = this._context.createDynamicsCompressor();
+		this._compressorTreble.threshold.value = -36;
+		this._compressorTreble.ratio.value = 2;
+		this._compressorTreble.attack.value = 0;
+		this._compressorTreble.release.value = 0.05;
+
+		this._compressorTreble.connect(this._mute);				
+
+		this.bamdpassTreble = this._context.createBiquadFilter();
+		this.bamdpassTreble.type = "bandpass";    
+		this.bamdpassTreble.frequency.value = 1500;		
+		this.bamdpassTreble.connect(this._compressorTreble);
+
+		this._gainNode.connect(this.bamdpassTreble);
+
 	}
 	
 	_initAnalyser() {
 		if (this._analyserNode) { return; }
 		let ctx = this._context;
 		this._audioData = [];
-		
+
 		// create an analyser node
 		this._analyserNode = ctx.createAnalyser();
 		this._analyserNode.fftSize = 128;  //The size of the FFT used for frequency-domain analysis. This must be a power of two
 		this._analyserNode.smoothingTimeConstant = 0;  //A value from 0 -> 1 where 0 represents no time averaging with the last analysis frame
 		this._analyserNode.connect(ctx.destination);  // connect to the context.destination, which outputs the audio
 		
-		// reconnect the gain node:
+		//reconnect the gain node:
 		this._gainNode.disconnect();
+		this._gainNode.connect(this._bandpassBass); // bandpass for the o.bass param
+		this._gainNode.connect(this.bamdpassTreble); // highpass for the o.treble param
 		this._gainNode.connect(this._analyserNode);
 
 		// set up the array that we use to retrieve the analyserNode data

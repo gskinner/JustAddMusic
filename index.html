@@ -23,7 +23,7 @@
 			src: "assets/bensound-dubstep.mp3",
 			label: "<b>JustAddMusic.js </b>",
 			ontick: function(o) {
-				document.body.style.background = "hsl(64,100%,"+Math.round(o.avg * 100)+"%)";
+			document.body.style.background = "hsl("+(Math.round(o.treble * 60)+100)+",100%,"+Math.round(o.bass * 50)+"%)";
 			}
 		});
 	</script>
