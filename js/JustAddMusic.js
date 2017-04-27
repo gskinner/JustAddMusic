@@ -245,9 +245,9 @@ var JustAddMusic = function () {
 			o.avg = sum / count;
 			o.delta = deltaO ? val - deltaO.vol : 0;
 			o.avgDelta = deltaO ? o.avg - deltaO.avg : 0;
-			o.bass = Math.abs(this._compressor.reduction) / 12;
-			o.treble = Math.abs(this._compressor2.reduction) / 12;
-			o.optical = Math.abs(this._compressor.reduction + this._compressor.reduction) / 12;
+			o.bass = Math.abs(this._compressorBass.reduction) / 12;
+			o.treble = Math.abs(this._compressorTreble.reduction) / 12;
+			o.optical = Math.abs(this._compressorBass.reduction + this._compressorTreble.reduction) / 12;
 
 			this.ontick && this.ontick(o);
 			return o;
@@ -271,35 +271,35 @@ var JustAddMusic = function () {
 			this._mute.gain.value = 0;
 			this._mute.connect(this._context.destination);
 
-			this._compressor = this._context.createDynamicsCompressor();
-			this._compressor.threshold.value = -36;
-			this._compressor.ratio.value = 2;
-			this._compressor.attack.value = 0;
-			this._compressor.release.value = 0.1;
+			this._compressorBass = this._context.createDynamicsCompressor();
+			this._compressorBass.threshold.value = -36;
+			this._compressorBass.ratio.value = 2;
+			this._compressorBass.attack.value = 0;
+			this._compressorBass.release.value = 0.1;
 
-			this._compressor.connect(this._mute);
+			this._compressorBass.connect(this._mute);
 
-			this._bandpass = this._context.createBiquadFilter();
-			this._bandpass.type = "bandpass";
-			this._bandpass.frequency.value = 125;
-			this._bandpass.connect(this._compressor);
+			this._bandpassBass = this._context.createBiquadFilter();
+			this._bandpassBass.type = "bandpass";
+			this._bandpassBass.frequency.value = 125;
+			this._bandpassBass.connect(this._compressorBass);
 
-			this._gainNode.connect(this._bandpass);
+			this._gainNode.connect(this._bandpassBass);
 
-			this._compressor2 = this._context.createDynamicsCompressor();
-			this._compressor2.threshold.value = -36;
-			this._compressor2.ratio.value = 2;
-			this._compressor2.attack.value = 0;
-			this._compressor2.release.value = 0.5;
+			this._compressorTreble = this._context.createDynamicsCompressor();
+			this._compressorTreble.threshold.value = -36;
+			this._compressorTreble.ratio.value = 2;
+			this._compressorTreble.attack.value = 0;
+			this._compressorTreble.release.value = 0.05;
 
-			this._compressor2.connect(this._mute);
+			this._compressorTreble.connect(this._mute);
 
-			this._bandpass2 = this._context.createBiquadFilter();
-			this._bandpass2.type = "highpass";
-			this._bandpass2.frequency.value = 1500;
-			this._bandpass2.connect(this._compressor2);
+			this.bamdpassTreble = this._context.createBiquadFilter();
+			this.bamdpassTreble.type = "bandpass";
+			this.bamdpassTreble.frequency.value = 1500;
+			this.bamdpassTreble.connect(this._compressorTreble);
 
-			this._gainNode.connect(this._bandpass2);
+			this._gainNode.connect(this.bamdpassTreble);
 		}
 	}, {
 		key: "_initAnalyser",
@@ -318,8 +318,8 @@ var JustAddMusic = function () {
 
 			//reconnect the gain node:
 			this._gainNode.disconnect();
-			this._gainNode.connect(this._bandpass);
-			this._gainNode.connect(this._bandpass2);
+			this._gainNode.connect(this._bandpassBass); // bandpass for the o.bass param
+			this._gainNode.connect(this.bamdpassTreble); // highpass for the o.treble param
 			this._gainNode.connect(this._analyserNode);
 
 			// set up the array that we use to retrieve the analyserNode data
