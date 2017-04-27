@@ -245,6 +245,9 @@ var JustAddMusic = function () {
 			o.avg = sum / count;
 			o.delta = deltaO ? val - deltaO.vol : 0;
 			o.avgDelta = deltaO ? o.avg - deltaO.avg : 0;
+			o.bass = Math.abs(this._compressor.reduction) / 12;
+			o.treble = Math.abs(this._compressor2.reduction) / 12;
+			o.optical = Math.abs(this._compressor.reduction + this._compressor.reduction) / 12;
 
 			this.ontick && this.ontick(o);
 			return o;
@@ -263,6 +266,40 @@ var JustAddMusic = function () {
 			this._context = new (window.AudioContext || window.webkitAudioContext)();
 			this._gainNode = this._context.createGain();
 			this._gainNode.connect(this._context.destination);
+
+			this._mute = this._context.createGain();
+			this._mute.gain.value = 0;
+			this._mute.connect(this._context.destination);
+
+			this._compressor = this._context.createDynamicsCompressor();
+			this._compressor.threshold.value = -36;
+			this._compressor.ratio.value = 2;
+			this._compressor.attack.value = 0;
+			this._compressor.release.value = 0.1;
+
+			this._compressor.connect(this._mute);
+
+			this._bandpass = this._context.createBiquadFilter();
+			this._bandpass.type = "bandpass";
+			this._bandpass.frequency.value = 125;
+			this._bandpass.connect(this._compressor);
+
+			this._gainNode.connect(this._bandpass);
+
+			this._compressor2 = this._context.createDynamicsCompressor();
+			this._compressor2.threshold.value = -36;
+			this._compressor2.ratio.value = 2;
+			this._compressor2.attack.value = 0;
+			this._compressor2.release.value = 0.5;
+
+			this._compressor2.connect(this._mute);
+
+			this._bandpass2 = this._context.createBiquadFilter();
+			this._bandpass2.type = "highpass";
+			this._bandpass2.frequency.value = 1500;
+			this._bandpass2.connect(this._compressor2);
+
+			this._gainNode.connect(this._bandpass2);
 		}
 	}, {
 		key: "_initAnalyser",
@@ -279,8 +316,10 @@ var JustAddMusic = function () {
 			this._analyserNode.smoothingTimeConstant = 0; //A value from 0 -> 1 where 0 represents no time averaging with the last analysis frame
 			this._analyserNode.connect(ctx.destination); // connect to the context.destination, which outputs the audio
 
-			// reconnect the gain node:
+			//reconnect the gain node:
 			this._gainNode.disconnect();
+			this._gainNode.connect(this._bandpass);
+			this._gainNode.connect(this._bandpass2);
 			this._gainNode.connect(this._analyserNode);
 
 			// set up the array that we use to retrieve the analyserNode data
