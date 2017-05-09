@@ -25,7 +25,6 @@
 class JustAddMusic {
 	/*
 	TODO:
-	- add color and balance outputs?
 	- re-evaluate whether volume should affect analyser
 	*/
 	constructor(config) {
@@ -66,6 +65,11 @@ class JustAddMusic {
 		this._gainNode = null;
 		this._sourceNode = null;
 		this._buffer = null;
+		this._muteNode = null;
+		
+		// hit detection:
+		this._inHit = false;
+		this._hitThreshold = 2;
 		
 		// method proxies:
 		this._bound_handleKeyDown = this._handleKeyDown.bind(this);
@@ -192,42 +196,21 @@ class JustAddMusic {
 		if (!this._sourceNode) { return; }
 		this._updateTimeUI();
 		if (!this.ontick && this._tickIntervalID) { return; }
-		!this._analyserNode&&this._initAnalyser();
+		!this._volAnalyser&&this._initAnalyser();
 		
-		let waveForm = this._freqData, mode = this.mode, t = (new Date()).getTime(), val = 0, i, l;
-		this._analyserNode.getByteTimeDomainData(waveForm);
+		let m = -15, o = this._oldObj || {low:{}, mid:{}, high:{}, all:{}};
+		this._oldObj = null;
 		
-		//TODO: it would be nice to have a color (aka pitch) and balance (aka pan) value.
-		for (i=0, l=waveForm.length; i<l; i++) {
-			let r = waveForm[i]/128-1; // analyser data is monaural unless you split the channels.
-			if (r < 0) { r *= -1; }
-			if (mode===1) { val += r*r; } // RMS
-			else if (mode === 2) { val += r; } // average
-			else if (r > val) { val = r; } // peak
-		}
+		o.t = (new Date()).getTime();
+		o.low.val = (this._lowAnalyser.reduction)/m;
+		o.mid.val = (this._midAnalyser.reduction)/m;
+		o.high.val = (this._highAnalyser.reduction)/m;
+		o.all.val = (this._volAnalyser.reduction)/m;
+		this._audioData.unshift(o);
 		
-		if (mode === 1) { val = Math.sqrt(val/l); }
-		else if (mode === 2) { val /= l; }
-		
-		val = 1-Math.pow(1-val, this.gain);
-		if (val > 1) { val = 1; }
-		
-		let data = this._audioData, o = {vol:val, t:t};
-		data.unshift(o);
-		
-		// calculate the delta and average values:
-		let sum = val, count = 1, deltaO = data[1];
-		for (i=1, l=data.length; i<l; i++) {
-			let o2 = data[i];
-			if (o2.t >= t-this._avgT) { sum += o2.vol; count++; }
-			if (o2.t >= t-this._deltaT) { deltaO = o2; }
-			if (o2.t < t-this._maxT) { data.pop(); l--; }
-		}
-		o.avg = sum/count;
-		o.delta = deltaO ? val-deltaO.vol : 0;
-		o.avgDelta = deltaO ? o.avg-deltaO.avg : 0;
-		
-		
+		this._calculateAvgs();
+		this._detectHit(o);
+
 		this.ontick&&this.ontick(o);
 		return o;
 	};
@@ -244,22 +227,68 @@ class JustAddMusic {
 	}
 	
 	_initAnalyser() {
-		if (this._analyserNode) { return; }
-		let ctx = this._context;
+		if (this._muteNode) { return; }
 		this._audioData = [];
 		
-		// create an analyser node
-		this._analyserNode = ctx.createAnalyser();
-		this._analyserNode.fftSize = 128;  //The size of the FFT used for frequency-domain analysis. This must be a power of two
-		this._analyserNode.smoothingTimeConstant = 0;  //A value from 0 -> 1 where 0 represents no time averaging with the last analysis frame
-		this._analyserNode.connect(ctx.destination);  // connect to the context.destination, which outputs the audio
+		// audio nodes need to be tied into a destination to work.
+		// this gives us a destination that doesn't affect the output.
+		this._muteNode = this._context.createGain();
+		this._muteNode.gain.value = 0;
+		this._muteNode.connect(this._context.destination);
 		
-		// reconnect the gain node:
-		this._gainNode.disconnect();
-		this._gainNode.connect(this._analyserNode);
-
-		// set up the array that we use to retrieve the analyserNode data
-		this._freqData = new Uint8Array(this._analyserNode.frequencyBinCount);
+		this._lowAnalyser = this._createBandAnalyser(40,250);
+		this._midAnalyser = this._createBandAnalyser(250,2000);
+		this._highAnalyser = this._createBandAnalyser(2000,6000);
+		this._volAnalyser = this._createBandAnalyser();
+	}
+	
+	_createBandAnalyser(low, high) {
+		let bandpass, compressor = this._context.createDynamicsCompressor();
+		compressor.threshold.value = -36;
+		compressor.ratio.value = 10;
+		compressor.attack.value = 0;
+		compressor.release.value = 0;
+		compressor.connect(this._muteNode);
+		
+		if (low || high) {
+			let freq = Math.sqrt(low * high), q = freq / (high - low);
+			bandpass = this._context.createBiquadFilter();
+			bandpass.type = "bandpass";
+			bandpass.Q.value = q;
+			bandpass.frequency.value = freq;
+			bandpass.connect(compressor);
+		}
+		
+		this._gainNode.connect(bandpass||compressor);
+		return compressor;
+	}
+	
+	_calculateAvgs() {
+		let data = this._audioData, o=data[0], t=o.t; 
+		// calculate the delta and average values:
+		let deltaO = data[1], avgI=0;
+		for (let i=1, l=data.length; i<l; i++) {
+			let o2 = data[i], t=o2.t;
+			if (t >= t-this._avgT) { avgI = i; }
+			if (t >= t-this._deltaT) { deltaO = o2; }
+			if (t < t-this._maxT) { this._oldObj = data.pop(); l--; }
+		}
+		for (let key in o) {
+			let band = o[key];
+			if (band.val === undefined) { continue; }
+			band.avg = data.reduce((acc,val,i)=>(i>avgI?acc:acc+val[key].val),0) / avgI;
+			band.delta = deltaO ? band.val - deltaO[key].val : 0;
+			band.trend = deltaO ? band.avg - data[avgI][key].avg : 0;
+		}
+	}
+	
+	_detectHit(o) {
+		let val = o.low.val, threshold = this._hitThreshold;
+		o.hit = false;
+		if (Math.pow(val,1.3) > threshold*1.3) {
+			if (!this._inHit) { o.hit = this._inHit = true; }
+		} else { this._inHit = false; }
+		this._hitThreshold = Math.max(0.1,val,threshold-(threshold-val)*0.15);
 	}
 	
 	_initDropTarget(target) {

@@ -31,7 +31,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var JustAddMusic = function () {
 	/*
  TODO:
- - add color and balance outputs?
  - re-evaluate whether volume should affect analyser
  */
 	function JustAddMusic(config) {
@@ -76,6 +75,11 @@ var JustAddMusic = function () {
 		this._gainNode = null;
 		this._sourceNode = null;
 		this._buffer = null;
+		this._muteNode = null;
+
+		// hit detection:
+		this._inHit = false;
+		this._hitThreshold = 2;
 
 		// method proxies:
 		this._bound_handleKeyDown = this._handleKeyDown.bind(this);
@@ -184,67 +188,21 @@ var JustAddMusic = function () {
 			if (!this.ontick && this._tickIntervalID) {
 				return;
 			}
-			!this._analyserNode && this._initAnalyser();
+			!this._volAnalyser && this._initAnalyser();
 
-			var waveForm = this._freqData,
-			    mode = this.mode,
-			    t = new Date().getTime(),
-			    val = 0,
-			    i = void 0,
-			    l = void 0;
-			this._analyserNode.getByteTimeDomainData(waveForm);
+			var m = -15,
+			    o = this._oldObj || { low: {}, mid: {}, high: {}, all: {} };
+			this._oldObj = null;
 
-			//TODO: it would be nice to have a color (aka pitch) and balance (aka pan) value.
-			for (i = 0, l = waveForm.length; i < l; i++) {
-				var r = waveForm[i] / 128 - 1; // analyser data is monaural unless you split the channels.
-				if (r < 0) {
-					r *= -1;
-				}
-				if (mode === 1) {
-					val += r * r;
-				} // RMS
-				else if (mode === 2) {
-						val += r;
-					} // average
-					else if (r > val) {
-							val = r;
-						} // peak
-			}
+			o.t = new Date().getTime();
+			o.low.val = this._lowAnalyser.reduction / m;
+			o.mid.val = this._midAnalyser.reduction / m;
+			o.high.val = this._highAnalyser.reduction / m;
+			o.all.val = this._volAnalyser.reduction / m;
+			this._audioData.unshift(o);
 
-			if (mode === 1) {
-				val = Math.sqrt(val / l);
-			} else if (mode === 2) {
-				val /= l;
-			}
-
-			val = 1 - Math.pow(1 - val, this.gain);
-			if (val > 1) {
-				val = 1;
-			}
-
-			var data = this._audioData,
-			    o = { vol: val, t: t };
-			data.unshift(o);
-
-			// calculate the delta and average values:
-			var sum = val,
-			    count = 1,
-			    deltaO = data[1];
-			for (i = 1, l = data.length; i < l; i++) {
-				var o2 = data[i];
-				if (o2.t >= t - this._avgT) {
-					sum += o2.vol;count++;
-				}
-				if (o2.t >= t - this._deltaT) {
-					deltaO = o2;
-				}
-				if (o2.t < t - this._maxT) {
-					data.pop();l--;
-				}
-			}
-			o.avg = sum / count;
-			o.delta = deltaO ? val - deltaO.vol : 0;
-			o.avgDelta = deltaO ? o.avg - deltaO.avg : 0;
+			this._calculateAvgs();
+			this._detectHit(o);
 
 			this.ontick && this.ontick(o);
 			return o;
@@ -267,24 +225,101 @@ var JustAddMusic = function () {
 	}, {
 		key: "_initAnalyser",
 		value: function _initAnalyser() {
-			if (this._analyserNode) {
+			if (this._muteNode) {
 				return;
 			}
-			var ctx = this._context;
 			this._audioData = [];
 
-			// create an analyser node
-			this._analyserNode = ctx.createAnalyser();
-			this._analyserNode.fftSize = 128; //The size of the FFT used for frequency-domain analysis. This must be a power of two
-			this._analyserNode.smoothingTimeConstant = 0; //A value from 0 -> 1 where 0 represents no time averaging with the last analysis frame
-			this._analyserNode.connect(ctx.destination); // connect to the context.destination, which outputs the audio
+			// audio nodes need to be tied into a destination to work.
+			// this gives us a destination that doesn't affect the output.
+			this._muteNode = this._context.createGain();
+			this._muteNode.gain.value = 0;
+			this._muteNode.connect(this._context.destination);
 
-			// reconnect the gain node:
-			this._gainNode.disconnect();
-			this._gainNode.connect(this._analyserNode);
+			this._lowAnalyser = this._createBandAnalyser(40, 250);
+			this._midAnalyser = this._createBandAnalyser(250, 2000);
+			this._highAnalyser = this._createBandAnalyser(2000, 6000);
+			this._volAnalyser = this._createBandAnalyser();
+		}
+	}, {
+		key: "_createBandAnalyser",
+		value: function _createBandAnalyser(low, high) {
+			var bandpass = void 0,
+			    compressor = this._context.createDynamicsCompressor();
+			compressor.threshold.value = -36;
+			compressor.ratio.value = 10;
+			compressor.attack.value = 0;
+			compressor.release.value = 0;
+			compressor.connect(this._muteNode);
 
-			// set up the array that we use to retrieve the analyserNode data
-			this._freqData = new Uint8Array(this._analyserNode.frequencyBinCount);
+			if (low || high) {
+				var freq = Math.sqrt(low * high),
+				    q = freq / (high - low);
+				bandpass = this._context.createBiquadFilter();
+				bandpass.type = "bandpass";
+				bandpass.Q.value = q;
+				bandpass.frequency.value = freq;
+				bandpass.connect(compressor);
+			}
+
+			this._gainNode.connect(bandpass || compressor);
+			return compressor;
+		}
+	}, {
+		key: "_calculateAvgs",
+		value: function _calculateAvgs() {
+			var data = this._audioData,
+			    o = data[0],
+			    t = o.t;
+			// calculate the delta and average values:
+			var deltaO = data[1],
+			    avgI = 0;
+			for (var i = 1, l = data.length; i < l; i++) {
+				var o2 = data[i],
+				    _t = o2.t;
+				if (_t >= _t - this._avgT) {
+					avgI = i;
+				}
+				if (_t >= _t - this._deltaT) {
+					deltaO = o2;
+				}
+				if (_t < _t - this._maxT) {
+					this._oldObj = data.pop();l--;
+				}
+			}
+
+			var _loop = function _loop(key) {
+				var band = o[key];
+				if (band.val === undefined) {
+					return "continue";
+				}
+				band.avg = data.reduce(function (acc, val, i) {
+					return i > avgI ? acc : acc + val[key].val;
+				}, 0) / avgI;
+				band.delta = deltaO ? band.val - deltaO[key].val : 0;
+				band.trend = deltaO ? band.avg - data[avgI][key].avg : 0;
+			};
+
+			for (var key in o) {
+				var _ret = _loop(key);
+
+				if (_ret === "continue") continue;
+			}
+		}
+	}, {
+		key: "_detectHit",
+		value: function _detectHit(o) {
+			var val = o.low.val,
+			    threshold = this._hitThreshold;
+			o.hit = false;
+			if (Math.pow(val, 1.3) > threshold * 1.3) {
+				if (!this._inHit) {
+					o.hit = this._inHit = true;
+				}
+			} else {
+				this._inHit = false;
+			}
+			this._hitThreshold = Math.max(0.1, val, threshold - (threshold - val) * 0.15);
 		}
 	}, {
 		key: "_initDropTarget",

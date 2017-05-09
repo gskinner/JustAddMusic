@@ -8,7 +8,7 @@ JustAddMusic (aka JAM) makes it simple to add music and music visualization to y
 * audio analysis for music visualization
 * enable with a single line of code
 * api for custom UI / controls
-* only 3kb over the wire
+* only ~3kb over the wire
 
 Tested in recent versions of Chrome, Edge, Safari, and FireFox.
 
@@ -30,8 +30,8 @@ This example will play the music, and react to its averaged volume by changing t
 new JustAddMusic({
 	src: "myMusic.mp3",
 	ontick: function(o) {
-		var l = Math.round(o.avg * 100);
-		document.body.style.background = "hsl(90,100,"+l+")";
+		var l = Math.round(o.all.avg * 100);
+		document.body.style.background = "hsl(90,100%,"+l+"%)";
 	}
 });
 ```
@@ -71,7 +71,7 @@ These properties can be set using the config param, or directly on a JAM instanc
 * `tickInterval=16`: interval in ms to tick analyser on or 0 to tick manually via `tick()`
 * `volume=1`: playback volume, does affect analyser
 * `ui=true`: show / hide simple ui (true)
-* `audioData`: Read-only. Object with latest audio data: vol, avg, delta, avgDelta, and t (timecode).
+* `audioData`: Read-only. Object with latest audio data (see Audio Data below)
 
 
 ## Methods
@@ -82,7 +82,22 @@ These properties can be set using the config param, or directly on a JAM instanc
 * `pause()`: pauses playback
 * `stop()`: pauses playback, resets playback to start, and aborts active load
 * `skip(time)`: skips forward or back by the specified time in seconds
-* `tick()`: runs the analyser and returns the latest audio data. Called automatically if tickInterval > 0.
+* `tick()`: runs the analyser and returns the latest audio data (see below). Called automatically if tickInterval > 0.
+
+
+## Audio Data
+Audio data objects have the following properties:
+
+* `t`: a timestamp
+* `hit`: true if a hit (significant jump in bass) was detected
+* `low`, `mid`, `high`, `all`: object containing values for a frequency range
+
+Each of the frequency range objects have the following properties:
+
+* `val`: the instantaneous value of the range
+* `avg`: the average value over `avgT` milliseconds
+* `delta`: the change in value over `deltaT` milliseconds
+* `trend`: the change in the `avg` value over `avgT` milliseconds
 
 
 ## Keyboard Control

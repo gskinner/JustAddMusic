@@ -3,27 +3,65 @@
 <head lang="en">
 	<meta charset="UTF-8">
 	<title></title>
-	<script src="js/JustAddMusic.min.js"></script>
+	<script src="js/JustAddMusic.js"></script>
 	<style type="text/css">
 		body {
 			margin:0;
-			background: #222;
+			background: #333;
+			background: #333;
 			position: absolute;
 			width: 100%;
 			height: 100%;
 			box-sizing: border-box;
 		}
-		.jam-drop { border: solid 20px #EF3;  }
-		.jam-ui b { color: #EF3; }
+		.jam-drop { border: solid 20px #CF3;  } /* draw an outline when a file is dragged over the drop target */
+		.jam-ui { font-size: 18px; } /* make the UI text a bit bigger than usual */
+		.bar {
+			height:100%;
+			width: 32%;
+			background: #222;
+			position: absolute;
+			bottom: 0;
+		}
+		#bar2 { left: 33%; width:34%; }
+		#bar3 { left: 68%; }
 	</style>
 </head>
 <body>
+	<div id="bar1" class="bar"></div>
+	<div id="bar2" class="bar"></div>
+	<div id="bar3" class="bar"></div>
 	<script>
+		var hue = 60;
+		
+		// create a new JAM instance:
 		new JustAddMusic({
+			 // default audio to load:
 			src: "assets/bensound-dubstep.mp3",
-			label: "<b>JustAddMusic.js </b>",
+			
+			// label text to include in the UI (bottom left)
+			label: "<b>JustAddMusic.js </b>", 
+			
+			// the ontick callback, called 60 time per second by default
+			// with the latest audio data object as the only parameter
 			ontick: function(o) {
-				document.body.style.background = "hsl(64,100%,"+Math.round(o.avg * 100)+"%)";
+				// update the bar heights based on instantaneous values:
+				bar1.style.height = o.low.val * 100+"%";
+				bar2.style.height = o.mid.val * 100+"%";
+				bar3.style.height = o.high.val * 100+"%";
+				
+				// change the hue on each hit:
+				if (o.hit) { hue = (hue+100)%360; }
+				
+				// vary the saturation and lightness based on the avg volume:
+				let n = o.all.avg*100;
+				
+				// update the body background color:
+				document.body.style.background = "hsl("+ hue +","+ n +"%,"+ (n/2+12) +"%)";
+				
+				// grab the label and update its color:
+				var label = document.body.querySelector(".jam-ui b");
+				label.style.color = "hsl("+ hue +",100%,50%)";
 			}
 		});
 	</script>
