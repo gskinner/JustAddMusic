@@ -5,7 +5,7 @@ JustAddMusic (aka JAM) makes it simple to add music and music visualization to y
 * load audio files, or drag and drop from local file system
 * keyboard control for volume, seeking, play/pause
 * simple UI to display load status and playback time
-* audio analysis for music visualization
+* robust audio analysis for music visualization
 * enable with a single line of code
 * api for custom UI / controls
 * only ~3kb over the wire
@@ -16,7 +16,7 @@ Tested in recent versions of Chrome, Edge, Safari, and FireFox.
 ## Simple Example
 
 This example will load the specified audio file and play it, display load / playback status, enable keyboard control
-and allow the user to drag their own audio file onto the window to play them.
+and allow the user to drag their own audio files onto the window to play them.
 
 ```javascript
 var jam = new JustAddMusic("myMusic.mp3");
