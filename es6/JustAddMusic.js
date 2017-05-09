@@ -197,16 +197,16 @@ class JustAddMusic {
 		if (!this._sourceNode) { return; }
 		this._updateTimeUI();
 		if (!this.ontick && this._tickIntervalID) { return; }
-		!this._volAnalyser&&this._initAnalyser();
+		!this._allAnalyser&&this._initAnalyser();
 		
-		let m = -15, o = this._oldObj || {low:{}, mid:{}, high:{}, all:{}};
+		let o = this._oldObj || {low:{}, mid:{}, high:{}, all:{}};
 		this._oldObj = null;
 		
 		o.t = (new Date()).getTime();
-		o.low.val = (this._lowAnalyser.reduction)/m;
-		o.mid.val = (this._midAnalyser.reduction)/m;
-		o.high.val = (this._highAnalyser.reduction)/m;
-		o.all.val = (this._volAnalyser.reduction)/m;
+		this._getVal(o.low, this._lowAnalyser);
+		this._getVal(o.mid, this._midAnalyser);
+		this._getVal(o.high, this._highAnalyser);
+		this._getVal(o.all, this._allAnalyser);
 		this._audioData.unshift(o);
 		
 		this._calculateAvgs();
@@ -240,7 +240,7 @@ class JustAddMusic {
 		this._lowAnalyser = this._createBandAnalyser(40,250);
 		this._midAnalyser = this._createBandAnalyser(250,2000);
 		this._highAnalyser = this._createBandAnalyser(2000,6000);
-		this._volAnalyser = this._createBandAnalyser();
+		this._allAnalyser = this._createBandAnalyser();
 	}
 	
 	_createBandAnalyser(low, high) {
@@ -262,6 +262,13 @@ class JustAddMusic {
 		
 		this._gainNode.connect(bandpass||compressor);
 		return compressor;
+	}
+	
+	_getVal(bandObj, analyser) {
+		// Safari (and some older browsers) return `reduction` as an AudioParam.
+		// TODO: should we worry about 0 values? Should only ever happen with a wall of noise.
+		let val = analyser.reduction.value;
+		bandObj.val = (val === undefined ? analyser.reduction : val)/-16;
 	}
 	
 	_calculateAvgs() {
