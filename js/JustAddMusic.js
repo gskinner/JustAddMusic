@@ -276,14 +276,14 @@ var JustAddMusic = function () {
 			    avgI = 0;
 			for (var i = 1, l = data.length; i < l; i++) {
 				var o2 = data[i],
-				    _t = o2.t;
-				if (_t >= _t - this._avgT) {
+				    t2 = o2.t;
+				if (t2 >= t - this._avgT) {
 					avgI = i;
 				}
-				if (_t >= _t - this._deltaT) {
+				if (t2 >= t - this._deltaT) {
 					deltaO = o2;
 				}
-				if (_t < _t - this._maxT) {
+				if (t2 < t - this._maxT) {
 					this._oldObj = data.pop();l--;
 				}
 			}
@@ -298,6 +298,7 @@ var JustAddMusic = function () {
 				}, 0) / avgI;
 				band.delta = deltaO ? band.val - deltaO[key].val : 0;
 				band.trend = deltaO ? band.avg - data[avgI][key].avg : 0;
+				// console.log(avgI, data.length, data[avgI][key])
 			};
 
 			for (var key in o) {

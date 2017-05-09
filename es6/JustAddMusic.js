@@ -268,10 +268,10 @@ class JustAddMusic {
 		// calculate the delta and average values:
 		let deltaO = data[1], avgI=0;
 		for (let i=1, l=data.length; i<l; i++) {
-			let o2 = data[i], t=o2.t;
-			if (t >= t-this._avgT) { avgI = i; }
-			if (t >= t-this._deltaT) { deltaO = o2; }
-			if (t < t-this._maxT) { this._oldObj = data.pop(); l--; }
+			let o2 = data[i], t2=o2.t;
+			if (t2 >= t-this._avgT) { avgI = i; }
+			if (t2 >= t-this._deltaT) { deltaO = o2; }
+			if (t2 < t-this._maxT) { this._oldObj = data.pop(); l--; }
 		}
 		for (let key in o) {
 			let band = o[key];
@@ -279,6 +279,7 @@ class JustAddMusic {
 			band.avg = data.reduce((acc,val,i)=>(i>avgI?acc:acc+val[key].val),0) / avgI;
 			band.delta = deltaO ? band.val - deltaO[key].val : 0;
 			band.trend = deltaO ? band.avg - data[avgI][key].avg : 0;
+			// console.log(avgI, data.length, data[avgI][key])
 		}
 	}
 	
