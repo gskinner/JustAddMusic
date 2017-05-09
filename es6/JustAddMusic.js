@@ -349,16 +349,17 @@ class JustAddMusic {
 	
 	// event handlers:
 	_handleKeyDown(evt) {
-		let key = evt.key;
-		if (key === " ") {
+		let key = evt.key || evt.keyIdentifier; // Safari does not support .key
+		key = key.replace("Arrow", ""); // make matching easier
+		if (key === " " || key === "U+0020") {
 			this.paused = !this.paused;
 		} else if (key === "Enter") {
 			this._pausedT = 0;
 			this.play();
-		} else if (key === "ArrowUp" || key === "ArrowDown") {
-			this.volume += 0.1 * (key === "ArrowUp" ? 1 : -1);
-		} else if (key === "ArrowLeft" || key === "ArrowRight") {
-			let s = (key === "ArrowLeft" ? -1 : 1) * (evt.shiftKey ? 15 : 5) * (evt.altKey ? 12 : 1);
+		} else if (key === "Up" || key === "Down") {
+			this.volume += 0.1 * (key === "Up" ? 1 : -1);
+		} else if (key === "Left" || key === "Right") {
+			let s = (key === "Left" ? -1 : 1) * (evt.shiftKey ? 15 : 5) * (evt.altKey ? 12 : 1);
 			this.skip(s);
 		}
 	}
