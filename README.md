@@ -99,6 +99,9 @@ Each of the frequency range objects have the following properties:
 * `delta`: the change in value over `deltaT` milliseconds
 * `trend`: the change in the `avg` value over `avgT` milliseconds
 
+Note that Chrome seems to calculate these differently than other browsers, which results in lower values. You could use
+`gain` to adjust for this.
+
 
 ## Keyboard Control
 
