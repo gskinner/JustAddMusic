@@ -50,7 +50,6 @@ initialization properties:
 
 * `src`: uri of audio file to load initially
 * `dropTarget=window`: query selector or HTMLElement to use as a drag & drop target
-* `mode=0`: one of JustAddMusic.PEAK / RMS / AVERAGE
 * `deltaT=50`: time in ms used to calculate the delta value
 * `avgT=150`: time in ms used to calculate the avg value
 
@@ -61,17 +60,17 @@ The config object can also include any of the properties listed below.
 
 These properties can be set using the config param, or directly on a JAM instance.
 
-* `gain=1`: boosts volume for the analyser only (not playback volume)
-* `onstart`: called when audio starts playing
-* `ontick`: called each time the analyser ticks with the latest audio data
-* `onprogress`: called with a single param indicating file load progress as 0-1
-* `label`: text or html to inject before other content in the UI
+* `gain=1`: boosts volume for the analyser (not playback volume). This can result in values higher than 1.
+* `volume=1`: playback volume, does affect analyser
 * `paused=false`: play / pause audio
 * `keyControl=true`: enable key control (see below)
 * `tickInterval=16`: interval in ms to tick analyser on or 0 to tick manually via `tick()`
-* `volume=1`: playback volume, does affect analyser
 * `ui=true`: show / hide simple ui (true)
+* `label`: text or html to inject before other content in the UI
 * `audioData`: Read-only. Object with latest audio data (see Audio Data below)
+* `onstart`: callback that is invoked when a new audio file starts playing
+* `ontick`: called each time the analyser ticks with the latest audio data as a param
+* `onprogress`: called with a single param indicating file load progress as 0-1
 
 
 ## Methods
@@ -98,9 +97,6 @@ Each of the frequency range objects have the following properties:
 * `avg`: the average value over `avgT` milliseconds
 * `delta`: the change in value over `deltaT` milliseconds
 * `trend`: the change in the `avg` value over `avgT` milliseconds
-
-Note that Chrome seems to calculate these differently than other browsers, which results in lower values. You could use
-`gain` to adjust for this.
 
 
 ## Keyboard Control
