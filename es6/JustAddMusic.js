@@ -26,6 +26,7 @@ class JustAddMusic {
 	/*
 	TODO:
 	- re-evaluate whether volume should affect analyser
+	- solve issue with init values for the analysers
 	*/
 	constructor(config) {
 		if (!config || typeof config === "string") { config = {src:config}; }
@@ -276,10 +277,9 @@ class JustAddMusic {
 		for (let key in o) {
 			let band = o[key];
 			if (band.val === undefined) { continue; }
-			band.avg = data.reduce((acc,val,i)=>(i>avgI?acc:acc+val[key].val),0) / avgI;
+			band.avg = avgI ? data.reduce((acc,val,i)=>(i>avgI?acc:acc+val[key].val),0) / avgI : 0;
 			band.delta = deltaO ? band.val - deltaO[key].val : 0;
 			band.trend = deltaO ? band.avg - data[avgI][key].avg : 0;
-			// console.log(avgI, data.length, data[avgI][key])
 		}
 	}
 	

@@ -32,6 +32,7 @@ var JustAddMusic = function () {
 	/*
  TODO:
  - re-evaluate whether volume should affect analyser
+ - solve issue with init values for the analysers
  */
 	function JustAddMusic(config) {
 		_classCallCheck(this, JustAddMusic);
@@ -293,12 +294,11 @@ var JustAddMusic = function () {
 				if (band.val === undefined) {
 					return "continue";
 				}
-				band.avg = data.reduce(function (acc, val, i) {
+				band.avg = avgI ? data.reduce(function (acc, val, i) {
 					return i > avgI ? acc : acc + val[key].val;
-				}, 0) / avgI;
+				}, 0) / avgI : 0;
 				band.delta = deltaO ? band.val - deltaO[key].val : 0;
 				band.trend = deltaO ? band.avg - data[avgI][key].avg : 0;
-				// console.log(avgI, data.length, data[avgI][key])
 			};
 
 			for (var key in o) {
