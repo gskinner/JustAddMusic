@@ -32,7 +32,6 @@ var JustAddMusic = function () {
 	/*
  TODO:
  - re-evaluate whether volume should affect analyser
- - solve issue with init values for the analysers
  */
 	function JustAddMusic(config) {
 		_classCallCheck(this, JustAddMusic);
@@ -70,6 +69,12 @@ var JustAddMusic = function () {
 		this._deltaT = config.deltaT || 50;
 		this._avgT = config.avgT || 150;
 		this._maxT = Math.max(this._deltaT, this._avgT);
+		this._allAdj = 0.1;
+		this._bandAdj = 0.1;
+
+		// hit detection:
+		this._inHit = false;
+		this._hitThreshold = 2;
 
 		// web audio:
 		this._context = null;
@@ -77,10 +82,6 @@ var JustAddMusic = function () {
 		this._sourceNode = null;
 		this._buffer = null;
 		this._muteNode = null;
-
-		// hit detection:
-		this._inHit = false;
-		this._hitThreshold = 2;
 
 		// method proxies:
 		this._bound_handleKeyDown = this._handleKeyDown.bind(this);
@@ -171,7 +172,6 @@ var JustAddMusic = function () {
 			if (!this._buffer) {
 				return;
 			}
-
 			if (this._paused) {
 				this._pausedT += time;
 			} else {
@@ -191,15 +191,16 @@ var JustAddMusic = function () {
 			}
 			!this._allAnalyser && this._initAnalyser();
 
-			var o = this._oldObj || { low: {}, mid: {}, high: {}, all: {} };
+			var o = this._oldObj || { low: {}, mid: {}, high: {}, all: {} },
+			    data = this._audioData;
 			this._oldObj = null;
+			data.unshift(o);
 
-			o.t = new Date().getTime();
-			this._getVal(o.low, this._lowAnalyser);
-			this._getVal(o.mid, this._midAnalyser);
-			this._getVal(o.high, this._highAnalyser);
-			this._getVal(o.all, this._allAnalyser);
-			this._audioData.unshift(o);
+			var t = o.t = this._context.currentTime * 1000;
+			this._getVal(o.all, this._allAnalyser, t, true);
+			this._getVal(o.low, this._lowAnalyser, t);
+			this._getVal(o.mid, this._midAnalyser, t);
+			this._getVal(o.high, this._highAnalyser, t);
 
 			this._calculateAvgs();
 			this._detectHit(o);
@@ -245,17 +246,23 @@ var JustAddMusic = function () {
 		key: "_createBandAnalyser",
 		value: function _createBandAnalyser(low, high) {
 			var bandpass = void 0,
-			    compressor = this._context.createDynamicsCompressor();
+			    ctx = this._context,
+			    t = ctx.currentTime,
+			    compressor = ctx.createDynamicsCompressor();
 			compressor.threshold.value = -36;
+			compressor.knee.value = 35;
 			compressor.ratio.value = 10;
-			compressor.attack.value = 0;
 			compressor.release.value = 0;
 			compressor.connect(this._muteNode);
+
+			// this reduces the initial burst:
+			compressor.attack.value = 1;
+			compressor.attack.linearRampToValueAtTime(0, t + 0.1);
 
 			if (low || high) {
 				var freq = Math.sqrt(low * high),
 				    q = freq / (high - low);
-				bandpass = this._context.createBiquadFilter();
+				bandpass = ctx.createBiquadFilter();
 				bandpass.type = "bandpass";
 				bandpass.Q.value = q;
 				bandpass.frequency.value = freq;
@@ -267,11 +274,22 @@ var JustAddMusic = function () {
 		}
 	}, {
 		key: "_getVal",
-		value: function _getVal(bandObj, analyser) {
+		value: function _getVal(bandObj, analyser, t, all) {
 			// Safari (and some older browsers) return `reduction` as an AudioParam.
 			// TODO: should we worry about 0 values? Should only ever happen with a wall of noise.
-			var val = analyser.reduction.value;
-			bandObj.val = (val === undefined ? analyser.reduction : val) / -16;
+			var val = analyser.reduction.value,
+			    adj = all ? this._allAdj : this._bandAdj;
+			val = (val === undefined ? analyser.reduction : val) * -adj;
+			if (val > 1) {
+				adj /= val;
+				val = 1;
+				if (all) {
+					this._allAdj = adj;
+				} else {
+					this._bandAdj = adj;
+				}
+			}
+			return bandObj.val = val * this.gain;
 		}
 	}, {
 		key: "_calculateAvgs",
@@ -319,6 +337,8 @@ var JustAddMusic = function () {
 		value: function _detectHit(o) {
 			var val = o.low.val,
 			    threshold = this._hitThreshold;
+			var o2 = this._audioData[1],
+			    m = o2 ? (o.t - o2.t) / 16 : 1; // adjust for elapsed time.
 			o.hit = false;
 			if (Math.pow(val, 1.3) > threshold * 1.3) {
 				if (!this._inHit) {
@@ -327,7 +347,7 @@ var JustAddMusic = function () {
 			} else {
 				this._inHit = false;
 			}
-			this._hitThreshold = Math.max(0.1, val, threshold - (threshold - val) * 0.15);
+			this._hitThreshold = Math.max(0.1, val, threshold - (threshold - val) * 0.15 * m);
 		}
 	}, {
 		key: "_initDropTarget",
@@ -550,7 +570,3 @@ var JustAddMusic = function () {
 
 	return JustAddMusic;
 }();
-
-JustAddMusic.PEAK = 0;
-JustAddMusic.RMS = 1;
-JustAddMusic.AVERAGE = 2;
