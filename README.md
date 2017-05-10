@@ -60,8 +60,8 @@ The config object can also include any of the properties listed below.
 
 These properties can be set using the config param, or directly on a JAM instance.
 
-* `gain=1`: boosts volume for the analyser (not playback volume). This can result in values higher than 1.
-* `volume=1`: playback volume, does affect analyser
+* `gain=1`: boosts volume for the analyser (not playback volume). This can result in values higher than 1
+* `volume=1`: playback volume, does not affect analyser
 * `paused=false`: play / pause audio
 * `keyControl=true`: enable key control (see below)
 * `tickInterval=16`: interval in ms to tick analyser on or 0 to tick manually via `tick()`

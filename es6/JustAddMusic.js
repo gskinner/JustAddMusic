@@ -23,15 +23,10 @@
 */
 
 class JustAddMusic {
-	/*
-	TODO:
-	- re-evaluate whether volume should affect analyser
-	*/
 	constructor(config) {
 		if (!config || typeof config === "string") { config = {src:config}; }
 		
 	// public properties:
-		this.mode = config.mode||0;
 		this.gain = config.gain||1;
 		this.onstart = config.onstart;
 		this.ontick = config.ontick;
@@ -72,6 +67,7 @@ class JustAddMusic {
 		this._sourceNode = null;
 		this._buffer = null;
 		this._muteNode = null;
+		this._nullNode = null;
 		
 		// method proxies:
 		this._bound_handleKeyDown = this._handleKeyDown.bind(this);
@@ -107,13 +103,8 @@ class JustAddMusic {
 	
 	get tickInterval() { return this._tickInterval; }
 	set tickInterval(val=16) {
-		if (this._tickIntervalID !== undefined) {
-			clearInterval(this._tickIntervalID);
-			this._tickIntervalID = null;
-		}
-		if (val > 0) {
-			this._tickIntervalID = setInterval(this.tick.bind(this), val);
-		}
+		clearInterval(this._tickIntervalID);
+		this._tickIntervalID = (val > 0) ? setInterval(this.tick.bind(this), val) : 0;
 	}
 	
 	get volume() { return this._gainNode.gain.value; }
@@ -140,6 +131,7 @@ class JustAddMusic {
 		this.abort();
 		if (!src) { return; }
 		this._updateLoadUI(0);
+		
 		let request = this._request = new XMLHttpRequest();
 		request.open('GET', src, true);
 		request.responseType = 'arraybuffer';
@@ -148,7 +140,7 @@ class JustAddMusic {
 		request.send();
 	}
 	
-	abort() {//
+	abort() {
 		this._request&&this._request.abort();
 		this._request = null;
 	}
@@ -162,10 +154,12 @@ class JustAddMusic {
 		
 		let source = this._sourceNode = this._context.createBufferSource();
 		source.buffer = this._buffer;
-		source.connect(this._gainNode);
+		source.connect(this._nullNode);
 		source.start(0, offset);
+		
 		this._playT = this._context.currentTime - offset;
 		this._paused = false;
+		
 		bufferChanged&&this.onstart&&this.onstart();
 	}
 	
@@ -222,9 +216,13 @@ class JustAddMusic {
 	
 // private methods:
 	_initAudio() {
-		this._context = new (window.AudioContext||window.webkitAudioContext)();
-		this._gainNode = this._context.createGain();
-		this._gainNode.connect(this._context.destination);
+		let ctx = this._context = new (window.AudioContext||window.webkitAudioContext)();
+		this._gainNode = ctx.createGain();
+		this._gainNode.connect(ctx.destination);
+		
+		// analysers all connect to nullNode, so they don't have to be reconnected when the sourceNode changes:
+		this._nullNode = ctx.createGain();
+		this._nullNode.connect(this._gainNode);
 	}
 	
 	_initAnalyser() {
@@ -233,9 +231,9 @@ class JustAddMusic {
 		
 		// audio nodes need to be tied into a destination to work.
 		// this gives us a destination that doesn't affect the output.
-		this._muteNode = this._context.createGain();
-		this._muteNode.gain.value = 0;
-		this._muteNode.connect(this._context.destination);
+		let mute = this._muteNode = this._context.createGain();
+		mute.gain.value = 0;
+		mute.connect(this._context.destination);
 		
 		this._lowAnalyser = this._createBandAnalyser(40,250);
 		this._midAnalyser = this._createBandAnalyser(250,2000);
@@ -244,16 +242,16 @@ class JustAddMusic {
 	}
 	
 	_createBandAnalyser(low, high) {
-		let bandpass, ctx = this._context, t=ctx.currentTime, compressor = ctx.createDynamicsCompressor();
+		let bandpass, ctx = this._context, compressor = ctx.createDynamicsCompressor();
 		compressor.threshold.value = -36;
 		compressor.knee.value = 35;
 		compressor.ratio.value = 10;
 		compressor.release.value = 0;
 		compressor.connect(this._muteNode);
 		
-		// this reduces the initial burst:
+		// this eliminates the initial burst:
 		compressor.attack.value = 1;
-		compressor.attack.linearRampToValueAtTime(0, t+0.1);
+		compressor.attack.linearRampToValueAtTime(0, ctx.currentTime+0.1);
 		
 		if (low || high) {
 			let freq = Math.sqrt(low * high), q = freq / (high - low);
@@ -264,7 +262,7 @@ class JustAddMusic {
 			bandpass.connect(compressor);
 		}
 		
-		this._gainNode.connect(bandpass||compressor);
+		this._nullNode.connect(bandpass||compressor);
 		return compressor;
 	}
 	

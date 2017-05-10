@@ -29,10 +29,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 */
 
 var JustAddMusic = function () {
-	/*
- TODO:
- - re-evaluate whether volume should affect analyser
- */
 	function JustAddMusic(config) {
 		_classCallCheck(this, JustAddMusic);
 
@@ -41,7 +37,6 @@ var JustAddMusic = function () {
 		}
 
 		// public properties:
-		this.mode = config.mode || 0;
 		this.gain = config.gain || 1;
 		this.onstart = config.onstart;
 		this.ontick = config.ontick;
@@ -82,6 +77,7 @@ var JustAddMusic = function () {
 		this._sourceNode = null;
 		this._buffer = null;
 		this._muteNode = null;
+		this._nullNode = null;
 
 		// method proxies:
 		this._bound_handleKeyDown = this._handleKeyDown.bind(this);
@@ -114,6 +110,7 @@ var JustAddMusic = function () {
 				return;
 			}
 			this._updateLoadUI(0);
+
 			var request = this._request = new XMLHttpRequest();
 			request.open('GET', src, true);
 			request.responseType = 'arraybuffer';
@@ -124,7 +121,6 @@ var JustAddMusic = function () {
 	}, {
 		key: "abort",
 		value: function abort() {
-			//
 			this._request && this._request.abort();
 			this._request = null;
 		}
@@ -141,10 +137,12 @@ var JustAddMusic = function () {
 
 			var source = this._sourceNode = this._context.createBufferSource();
 			source.buffer = this._buffer;
-			source.connect(this._gainNode);
+			source.connect(this._nullNode);
 			source.start(0, offset);
+
 			this._playT = this._context.currentTime - offset;
 			this._paused = false;
+
 			bufferChanged && this.onstart && this.onstart();
 		}
 	}, {
@@ -219,9 +217,13 @@ var JustAddMusic = function () {
 	}, {
 		key: "_initAudio",
 		value: function _initAudio() {
-			this._context = new (window.AudioContext || window.webkitAudioContext)();
-			this._gainNode = this._context.createGain();
-			this._gainNode.connect(this._context.destination);
+			var ctx = this._context = new (window.AudioContext || window.webkitAudioContext)();
+			this._gainNode = ctx.createGain();
+			this._gainNode.connect(ctx.destination);
+
+			// analysers all connect to nullNode, so they don't have to be reconnected when the sourceNode changes:
+			this._nullNode = ctx.createGain();
+			this._nullNode.connect(this._gainNode);
 		}
 	}, {
 		key: "_initAnalyser",
@@ -233,9 +235,9 @@ var JustAddMusic = function () {
 
 			// audio nodes need to be tied into a destination to work.
 			// this gives us a destination that doesn't affect the output.
-			this._muteNode = this._context.createGain();
-			this._muteNode.gain.value = 0;
-			this._muteNode.connect(this._context.destination);
+			var mute = this._muteNode = this._context.createGain();
+			mute.gain.value = 0;
+			mute.connect(this._context.destination);
 
 			this._lowAnalyser = this._createBandAnalyser(40, 250);
 			this._midAnalyser = this._createBandAnalyser(250, 2000);
@@ -247,7 +249,6 @@ var JustAddMusic = function () {
 		value: function _createBandAnalyser(low, high) {
 			var bandpass = void 0,
 			    ctx = this._context,
-			    t = ctx.currentTime,
 			    compressor = ctx.createDynamicsCompressor();
 			compressor.threshold.value = -36;
 			compressor.knee.value = 35;
@@ -255,9 +256,9 @@ var JustAddMusic = function () {
 			compressor.release.value = 0;
 			compressor.connect(this._muteNode);
 
-			// this reduces the initial burst:
+			// this eliminates the initial burst:
 			compressor.attack.value = 1;
-			compressor.attack.linearRampToValueAtTime(0, t + 0.1);
+			compressor.attack.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
 
 			if (low || high) {
 				var freq = Math.sqrt(low * high),
@@ -269,7 +270,7 @@ var JustAddMusic = function () {
 				bandpass.connect(compressor);
 			}
 
-			this._gainNode.connect(bandpass || compressor);
+			this._nullNode.connect(bandpass || compressor);
 			return compressor;
 		}
 	}, {
@@ -527,13 +528,8 @@ var JustAddMusic = function () {
 		set: function set() {
 			var val = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 16;
 
-			if (this._tickIntervalID !== undefined) {
-				clearInterval(this._tickIntervalID);
-				this._tickIntervalID = null;
-			}
-			if (val > 0) {
-				this._tickIntervalID = setInterval(this.tick.bind(this), val);
-			}
+			clearInterval(this._tickIntervalID);
+			this._tickIntervalID = val > 0 ? setInterval(this.tick.bind(this), val) : 0;
 		}
 	}, {
 		key: "volume",
