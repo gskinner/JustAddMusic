@@ -383,9 +383,8 @@ var JustAddMusic = function () {
 			var div = this._uiDiv = document.createElement("div");
 			div.className = "jam-ui";
 			var sheet = document.createElement("style");
-			sheet.innerHTML = ".jam-ui { padding: 0.75em; font-size: 10pt; font-family: arial, sans-serif; background: black; color: white; z-index: 100; position:absolute; bottom:0; left:0; letter-spacing: 0.02em }";
-			// dump this at the top of head so it's easy to override.
-			document.head.insertBefore(sheet, document.head.firstChild);
+			sheet.innerHTML = ".jam-ui{padding:0.75em;font-size:10pt;font-family:arial,sans-serif;background:#000;color:#FFF;z-index:100;position:absolute;bottom:0;left:0;}";
+			document.head.insertBefore(sheet, document.head.firstChild); // dump this at the top of head so it's easy to override.
 		}
 	}, {
 		key: "_updateLoadUI",
@@ -422,8 +421,9 @@ var JustAddMusic = function () {
 	}, {
 		key: "_handleKeyDown",
 		value: function _handleKeyDown(evt) {
-			var key = evt.key || evt.keyIdentifier; // Safari does not support .key
+			var key = evt.key || evt.keyIdentifier; // old browsers do not support .key
 			key = key.replace("Arrow", ""); // make matching easier
+
 			if (key === " " || key === "U+0020") {
 				this.paused = !this.paused;
 			} else if (key === "Enter") {

@@ -57,11 +57,11 @@
 				let n = o.all.avg*100;
 				
 				// update the body background color:
-				document.body.style.background = "hsl("+ hue +","+ n +"%,"+ (n/2+12) +"%)";
+				document.body.style.background = "hsl("+ hue +","+ n*0.6 +"%,"+ (n*0.4+10) +"%)";
 				
 				// grab the label and update its color:
 				var label = document.body.querySelector(".jam-ui b");
-				label.style.color = "hsl("+ hue +",100%,50%)";
+				label.style.color = "hsl("+ hue +",60%,50%)";
 			}
 		});
 	</script>

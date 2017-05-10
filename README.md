@@ -7,7 +7,7 @@ JustAddMusic (aka JAM) makes it simple to add music and music visualization to y
 * simple UI to display load status and playback time
 * robust audio analysis for music visualization
 * enable with a single line of code
-* api for custom UI / controls
+* API for custom UI / controls
 * only ~3kb over the wire
 
 Tested in recent versions of Chrome, Edge, Safari, and FireFox.
@@ -117,6 +117,6 @@ When the user drags a file over the `dropTarget`, the `.jam-drop` class is added
 
 ## License
 
-JustAddMusic.js is copyright [gskinner.com](http://gskinner.com). Licensed under the MIT license.
+JustAddMusic.js is copyright [gskinner.com, inc.](http://gskinner.com). Licensed under the MIT license.
 
 Music by [bensound.com](http://www.bensound.com).
