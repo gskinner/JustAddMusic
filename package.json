@@ -1,14 +1,14 @@
 {
-  "name": "JustAddMusic",
+  "name": "justaddmusic",
   "version": "1.0.0",
-  "description": "",
+  "description": "Easily add music and music visualization to your web experiences.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "gskinner.com",
+  "license": "MIT",
   "devDependencies": {
     "babel-preset-env": "^1.4.0",
     "gulp": "^3.9.1",
@@ -19,5 +19,14 @@
     "presets": [
       "env"
     ]
-  }
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gskinner/JustAddMusic.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gskinner/JustAddMusic/issues"
+  },
+  "homepage": "https://github.com/gskinner/JustAddMusic#readme"
 }

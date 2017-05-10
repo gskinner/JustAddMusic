@@ -98,7 +98,7 @@ Each of the frequency range objects have the following properties:
 * `avg`: the average value over `avgT` milliseconds
 * `delta`: the change in value over `deltaT` milliseconds
 * `trend`: the change in the `avg` value over `avgT` milliseconds
-* `hit`: true if a hit (significant jump in value) was detected in the band
+* `hit`: true if a significant jump in value was detected in the band
 
 
 ## Keyboard Control
