@@ -90,7 +90,6 @@ These properties can be set using the config param, or directly on a JAM instanc
 Audio data objects have the following properties:
 
 * `t`: a timestamp
-* `hit`: true if a hit (significant jump in bass) was detected
 * `low`, `mid`, `high`, `all`: object containing values for a frequency range
 
 Each of the frequency range objects have the following properties:
@@ -99,6 +98,7 @@ Each of the frequency range objects have the following properties:
 * `avg`: the average value over `avgT` milliseconds
 * `delta`: the change in value over `deltaT` milliseconds
 * `trend`: the change in the `avg` value over `avgT` milliseconds
+* `hit`: true if a hit (significant jump in value) was detected in the band
 
 
 ## Keyboard Control

@@ -29,6 +29,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 */
 
 var JustAddMusic = function () {
+	/* TODO:
+ 	- evaluate having a .hit for each band
+  */
 	function JustAddMusic(config) {
 		_classCallCheck(this, JustAddMusic);
 
@@ -68,8 +71,7 @@ var JustAddMusic = function () {
 		this._bandAdj = 0.1;
 
 		// hit detection:
-		this._inHit = false;
-		this._hitThreshold = 2;
+		this._hitThresholds = { low: 2, mid: 2, high: 2, all: 2 };
 
 		// web audio:
 		this._context = null;
@@ -200,8 +202,7 @@ var JustAddMusic = function () {
 			this._getVal(o.mid, this._midAnalyser, t);
 			this._getVal(o.high, this._highAnalyser, t);
 
-			this._calculateAvgs();
-			this._detectHit(o);
+			this._calculate();
 
 			this.ontick && this.ontick(o);
 			return o;
@@ -277,7 +278,6 @@ var JustAddMusic = function () {
 		key: "_getVal",
 		value: function _getVal(bandObj, analyser, t, all) {
 			// Safari (and some older browsers) return `reduction` as an AudioParam.
-			// TODO: should we worry about 0 values? Should only ever happen with a wall of noise.
 			var val = analyser.reduction.value,
 			    adj = all ? this._allAdj : this._bandAdj;
 			val = (val === undefined ? analyser.reduction : val) * -adj;
@@ -293,13 +293,15 @@ var JustAddMusic = function () {
 			return bandObj.val = val * this.gain;
 		}
 	}, {
-		key: "_calculateAvgs",
-		value: function _calculateAvgs() {
+		key: "_calculate",
+		value: function _calculate() {
 			var data = this._audioData,
 			    o = data[0],
-			    t = o.t;
+			    t = o.t,
+			    thresholds = this._hitThresholds;
 			// calculate the delta and average values:
-			var deltaO = data[1],
+			var prevO = data[1],
+			    deltaO = prevO,
 			    avgI = 0;
 			for (var i = 1, l = data.length; i < l; i++) {
 				var o2 = data[i],
@@ -316,15 +318,25 @@ var JustAddMusic = function () {
 			}
 
 			var _loop = function _loop(key) {
-				var band = o[key];
-				if (band.val === undefined) {
+				var band = o[key],
+				    val = band.val;
+				if (val === undefined) {
 					return "continue";
 				}
 				band.avg = avgI ? data.reduce(function (acc, val, i) {
 					return i > avgI ? acc : acc + val[key].val;
 				}, 0) / avgI : 0;
-				band.delta = deltaO ? band.val - deltaO[key].val : 0;
+				band.delta = deltaO ? val - deltaO[key].val : 0;
 				band.trend = deltaO ? band.avg - data[avgI][key].avg : 0;
+
+				// detect a hit:
+				var threshold = thresholds[key],
+				    m = prevO ? (t - prevO.t) / 16 : 1;
+				band.hit = false;
+				if (!prevO[key].hit && Math.pow(val, 1.3) > threshold * 1.3) {
+					band.hit = true;
+				}
+				thresholds[key] = Math.max(0.1, val, threshold - (threshold - val) * 0.15 * m);
 			};
 
 			for (var key in o) {
@@ -332,23 +344,6 @@ var JustAddMusic = function () {
 
 				if (_ret === "continue") continue;
 			}
-		}
-	}, {
-		key: "_detectHit",
-		value: function _detectHit(o) {
-			var val = o.low.val,
-			    threshold = this._hitThreshold;
-			var o2 = this._audioData[1],
-			    m = o2 ? (o.t - o2.t) / 16 : 1; // adjust for elapsed time.
-			o.hit = false;
-			if (Math.pow(val, 1.3) > threshold * 1.3) {
-				if (!this._inHit) {
-					o.hit = this._inHit = true;
-				}
-			} else {
-				this._inHit = false;
-			}
-			this._hitThreshold = Math.max(0.1, val, threshold - (threshold - val) * 0.15 * m);
 		}
 	}, {
 		key: "_initDropTarget",

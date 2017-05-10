@@ -23,6 +23,9 @@
 */
 
 class JustAddMusic {
+	/* TODO:
+		- evaluate having a .hit for each band
+	 */
 	constructor(config) {
 		if (!config || typeof config === "string") { config = {src:config}; }
 		
@@ -58,8 +61,7 @@ class JustAddMusic {
 		this._bandAdj = 0.1;
 		
 		// hit detection:
-		this._inHit = false;
-		this._hitThreshold = 2;
+		this._hitThresholds = {low:2, mid:2, high:2, all:2};
 		
 		// web audio:
 		this._context = null;
@@ -203,8 +205,7 @@ class JustAddMusic {
 		this._getVal(o.mid, this._midAnalyser, t);
 		this._getVal(o.high, this._highAnalyser, t);
 		
-		this._calculateAvgs();
-		this._detectHit(o);
+		this._calculate();
 		
 		this.ontick&&this.ontick(o);
 		return o;
@@ -268,7 +269,6 @@ class JustAddMusic {
 	
 	_getVal(bandObj, analyser, t, all) {
 		// Safari (and some older browsers) return `reduction` as an AudioParam.
-		// TODO: should we worry about 0 values? Should only ever happen with a wall of noise.
 		let val = analyser.reduction.value, adj = all ? this._allAdj : this._bandAdj;
 		val = (val === undefined ? analyser.reduction : val)*-adj;
 		if (val > 1) {
@@ -280,10 +280,10 @@ class JustAddMusic {
 		return (bandObj.val = val*this.gain);
 	}
 	
-	_calculateAvgs() {
-		let data = this._audioData, o=data[0], t=o.t; 
+	_calculate() {
+		let data = this._audioData, o=data[0], t=o.t, thresholds=this._hitThresholds; 
 		// calculate the delta and average values:
-		let deltaO = data[1], avgI=0;
+		let prevO=data[1], deltaO=prevO, avgI=0;
 		for (let i=1, l=data.length; i<l; i++) {
 			let o2 = data[i], t2=o2.t;
 			if (t2 >= t-this._avgT) { avgI = i; }
@@ -291,22 +291,18 @@ class JustAddMusic {
 			if (t2 < t-this._maxT) { this._oldObj = data.pop(); l--; }
 		}
 		for (let key in o) {
-			let band = o[key];
-			if (band.val === undefined) { continue; }
+			let band = o[key], val=band.val;
+			if (val === undefined) { continue; }
 			band.avg = avgI ? data.reduce((acc,val,i)=>(i>avgI?acc:acc+val[key].val),0) / avgI : 0;
-			band.delta = deltaO ? band.val - deltaO[key].val : 0;
+			band.delta = deltaO ? val - deltaO[key].val : 0;
 			band.trend = deltaO ? band.avg - data[avgI][key].avg : 0;
+			
+			// detect a hit:
+			let threshold = thresholds[key], m = prevO ? (t-prevO.t)/16 : 1;
+			band.hit = false;
+			if (!prevO[key].hit && Math.pow(val,1.3) > threshold*1.3) { band.hit = true; }
+			thresholds[key] = Math.max(0.1,val,threshold-(threshold-val)*0.15*m);
 		}
-	}
-	
-	_detectHit(o) {
-		let val = o.low.val, threshold = this._hitThreshold;
-		let o2 = this._audioData[1], m = o2 ? (o.t-o2.t)/16 : 1; // adjust for elapsed time.
-		o.hit = false;
-		if (Math.pow(val,1.3) > threshold*1.3) {
-			if (!this._inHit) { o.hit = this._inHit = true; }
-		} else { this._inHit = false; }
-		this._hitThreshold = Math.max(0.1,val,threshold-(threshold-val)*0.15*m);
 	}
 	
 	_initDropTarget(target) {

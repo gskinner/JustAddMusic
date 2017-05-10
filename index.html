@@ -51,7 +51,7 @@
 				bar3.style.height = o.high.val * 100+"%";
 				
 				// change the hue on each hit:
-				if (o.hit) { hue = (hue+100)%360; }
+				if (o.low.hit) { hue = (hue+100)%360; }
 				
 				// vary the saturation and lightness based on the avg volume:
 				let n = o.all.avg*100;
