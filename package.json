@@ -2,7 +2,7 @@
   "name": "justaddmusic",
   "version": "1.0.0",
   "description": "Easily add music and music visualization to your web experiences.",
-  "main": "index.js",
+  "main": "js/JustAddMusic.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
