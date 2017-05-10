@@ -36,7 +36,9 @@ new JustAddMusic({
 });
 ```
 
-You can view a live example of this on [CodePen](https://codepen.io/gskinner/pen/EmgQyO).
+You can view a [live example](https://codepen.io/gskinner/pen/EmgQyO) of this on CodePen. Or a slightly more [complex sample](https://codepen.io/gskinner/pen/zwRNMr).
+
+Don't have an audio file handy? Grab the sample MP3 from [/assets/](https://github.com/gskinner/JustAddMusic/tree/master/assets) directory of the JAM repo.
 
 
 ## Constructor
