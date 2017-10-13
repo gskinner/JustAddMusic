@@ -36,7 +36,7 @@ new JustAddMusic({
 });
 ```
 
-You can view a [live example](https://codepen.io/gskinner/pen/EmgQyO) of this on CodePen. Or a slightly more [complex sample](https://codepen.io/gskinner/pen/zwRNMr).
+You can view this [simple example](https://codepen.io/gskinner/pen/EmgQyO) on CodePen. Or a more complex one showing [mid/low/high bands](https://codepen.io/gskinner/pen/zwRNMr). Or demonstrating [using spectrum](https://codepen.io/gskinner/pen/LzJBeM).
 
 Don't have an audio file handy? Grab the sample MP3 from [/assets/](https://github.com/gskinner/JustAddMusic/tree/master/assets) directory of the JAM repo.
 
