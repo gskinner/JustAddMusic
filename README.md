@@ -54,6 +54,7 @@ initialization properties:
 * `dropTarget=window`: query selector or HTMLElement to use as a drag & drop target
 * `deltaT=50`: time in ms used to calculate the delta value
 * `avgT=150`: time in ms used to calculate the avg value
+* `spectrumBins=0`: enables `spectrum` and sets the number of values to include in it
 
 The config object can also include any of the properties listed below.
 
@@ -94,6 +95,7 @@ Audio data objects have the following properties:
 
 * `t`: a timestamp
 * `low`, `mid`, `high`, `all`: object containing values for a frequency range
+* `spectrum`: array of length `spectrumBins` containing values ranging from 0-1
 
 Each of the frequency range objects have the following properties:
 

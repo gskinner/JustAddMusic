@@ -29,9 +29,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 */
 
 var JustAddMusic = function () {
-	/* TODO:
- 	- evaluate having a .hit for each band
-  */
 	function JustAddMusic(config) {
 		_classCallCheck(this, JustAddMusic);
 
@@ -71,6 +68,9 @@ var JustAddMusic = function () {
 		this._maxT = Math.max(this._deltaT, this._avgT);
 		this._allAdj = 0.1;
 		this._bandAdj = 0.1;
+		this._fftData = null;
+		this._fftBins = Math.max(0, Math.min(128, config.spectrumBins || 0));
+		this._fftThreshold = 0.65; // ignore off high frequencies beyond this point
 
 		// hit detection:
 		this._hitThresholds = { low: 2, mid: 2, high: 2, all: 2 };
@@ -82,6 +82,7 @@ var JustAddMusic = function () {
 		this._buffer = null;
 		this._muteNode = null;
 		this._nullNode = null;
+		this._analyserNode = null;
 
 		// method proxies:
 		this._bound_handleKeyDown = this._handleKeyDown.bind(this);
@@ -214,6 +215,7 @@ var JustAddMusic = function () {
 			this._getVal(o.high, this._highAnalyser, t);
 
 			this._calculate();
+			this._calculateSpectrum(o);
 
 			this.ontick && this.ontick(o);
 			return o;
@@ -247,14 +249,24 @@ var JustAddMusic = function () {
 
 			// audio nodes need to be tied into a destination to work.
 			// this gives us a destination that doesn't affect the output.
-			var mute = this._muteNode = this._context.createGain();
+			var ctx = this._context,
+			    mute = this._muteNode = ctx.createGain();
 			mute.gain.value = 0;
-			mute.connect(this._context.destination);
+			mute.connect(ctx.destination);
 
 			this._lowAnalyser = this._createBandAnalyser(40, 250);
 			this._midAnalyser = this._createBandAnalyser(250, 2000);
 			this._highAnalyser = this._createBandAnalyser(2000, 6000);
 			this._allAnalyser = this._createBandAnalyser();
+
+			// spectrum analyser:
+			if (this._fftBins) {
+				var analyser = this._analyserNode = ctx.createAnalyser();
+				analyser.fftSize = 512;
+				analyser.maxDecibels = -15;
+				this._fftData = new Uint8Array(analyser.frequencyBinCount);
+				this._nullNode.connect(analyser);
+			}
 		}
 	}, {
 		key: "_createBandAnalyser",
@@ -355,6 +367,32 @@ var JustAddMusic = function () {
 
 				if (_ret === "continue") continue;
 			}
+		}
+	}, {
+		key: "_calculateSpectrum",
+		value: function _calculateSpectrum(o) {
+			if (!this._fftBins) {
+				return;
+			}
+			var l = this._fftBins,
+			    arr = [],
+			    j = 0,
+			    fft = this._fftData,
+			    m = this._fftThreshold;
+			var analyser = this._analyserNode,
+			    c = analyser.frequencyBinCount;
+
+			analyser.getByteFrequencyData(fft);
+			for (var i = 0; i < l; i++) {
+				var sum = 0,
+				    max = (i + 1) / l * c * m,
+				    j0 = j;
+				while (j < max) {
+					sum += fft[j++];
+				}
+				arr[i] = sum / 255 / (j - j0);
+			}
+			o.spectrum = arr;
 		}
 	}, {
 		key: "_initDropTarget",
@@ -516,7 +554,9 @@ var JustAddMusic = function () {
 			return this._paused;
 		},
 		set: function set(val) {
-			!val ? this.play() : this.pause();
+			if (!val === this._paused) {
+				!val ? this.play() : this.pause();
+			}
 		}
 	}, {
 		key: "keyControl",
