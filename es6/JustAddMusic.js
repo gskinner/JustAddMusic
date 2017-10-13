@@ -347,7 +347,7 @@ class JustAddMusic {
 	}
 	
 	_formatTime(t) {
-		let m = t/60|0, s=Math.round(t-m*60);
+		let m = t/60|0, s=(t-m*60)|0;
 		return m+":"+(s<10?"0":"")+s;
 	}
 	
