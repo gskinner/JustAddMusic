@@ -34,9 +34,12 @@
 		var hue = 60;
 		
 		// create a new JAM instance:
-		new JustAddMusic({
+		var jam = new JustAddMusic({
 			 // default audio to load:
 			src: "assets/bensound-dubstep.mp3",
+
+			// this fires when the track ends:
+			onended: function() { console.log("ended"); },
 			
 			// label text to include in the UI (bottom left)
 			label: "<b>JustAddMusic.js </b>", 

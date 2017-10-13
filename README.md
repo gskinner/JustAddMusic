@@ -65,12 +65,14 @@ These properties can be set using the config param, or directly on a JAM instanc
 * `gain=1`: boosts volume for the analyser (not playback volume). This can result in values higher than 1
 * `volume=1`: playback volume, does not affect analyser
 * `paused=false`: play / pause audio
+* `loop=false`: loops the current audio when it reaches the end
 * `keyControl=true`: enable key control (see below)
 * `tickInterval=16`: interval in ms to tick analyser on or 0 to tick manually via `tick()`
 * `ui=true`: show / hide simple ui (true)
 * `label`: text or html to inject before other content in the UI
 * `audioData`: Read-only. Object with latest audio data (see Audio Data below)
 * `onstart`: callback that is invoked when a new audio file starts playing
+* `onended`: callback that is invoked when the audio plays to the end without looping
 * `ontick`: called each time the analyser ticks with the latest audio data as a param
 * `onprogress`: called with a single param indicating file load progress as 0-1
 
@@ -82,6 +84,7 @@ These properties can be set using the config param, or directly on a JAM instanc
 * `play()`: resumes playback
 * `pause()`: pauses playback
 * `stop()`: pauses playback, resets playback to start, and aborts active load
+* `seek(time)`: seeks to the specified time in seconds
 * `skip(time)`: skips forward or back by the specified time in seconds
 * `tick()`: runs the analyser and returns the latest audio data (see below). Called automatically if tickInterval > 0.
 

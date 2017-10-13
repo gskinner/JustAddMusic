@@ -43,8 +43,10 @@ var JustAddMusic = function () {
 		this.gain = config.gain || 1;
 		this.onstart = config.onstart;
 		this.ontick = config.ontick;
+		this.onended = config.onended;
 		this.onprogress = config.onprogress;
 		this.label = config.label || "";
+		this.loop = !!config.loop;
 
 		// private properties:
 		// getter / setter values:
@@ -132,6 +134,8 @@ var JustAddMusic = function () {
 	}, {
 		key: "play",
 		value: function play() {
+			var _this = this;
+
 			var bufferChanged = (this._sourceNode && this._sourceNode.buffer) !== this._buffer;
 
 			var offset = this._pausedT;
@@ -141,6 +145,9 @@ var JustAddMusic = function () {
 			source.buffer = this._buffer;
 			source.connect(this._nullNode);
 			source.start(0, offset);
+			source.addEventListener("ended", function (evt) {
+				return _this._handleEnded(evt);
+			});
 
 			this._playT = this._context.currentTime - offset;
 			this._paused = false;
@@ -167,17 +174,21 @@ var JustAddMusic = function () {
 			this._pausedT = this._playT = 0;
 		}
 	}, {
-		key: "skip",
-		value: function skip(time) {
+		key: "seek",
+		value: function seek(time) {
 			if (!this._buffer) {
 				return;
 			}
-			if (this._paused) {
-				this._pausedT += time;
-			} else {
-				this._pausedT = Math.min(this._buffer.duration, Math.max(0, this._context.currentTime - this._playT + time));
+			this.playT = 0;
+			this._pausedT = Math.min(this._buffer.duration - 0.001, Math.max(0, time));
+			if (!this._paused) {
 				this.play();
 			}
+		}
+	}, {
+		key: "skip",
+		value: function skip(time) {
+			this.seek(this._context.currentTime - this._playT + time);
 		}
 	}, {
 		key: "tick",
@@ -333,7 +344,7 @@ var JustAddMusic = function () {
 				var threshold = thresholds[key],
 				    m = prevO ? (t - prevO.t) / 16 : 1;
 				band.hit = false;
-				if (!prevO[key].hit && Math.pow(val, 1.3) > threshold * 1.3) {
+				if (prevO && !prevO[key].hit && Math.pow(val, 1.3) > threshold * 1.3) {
 					band.hit = true;
 				}
 				thresholds[key] = Math.max(0.1, val, threshold - (threshold - val) * 0.15 * m);
@@ -400,7 +411,7 @@ var JustAddMusic = function () {
 		key: "_formatTime",
 		value: function _formatTime(t) {
 			var m = t / 60 | 0,
-			    s = Math.round(t - m * 60);
+			    s = t - m * 60 | 0;
 			return m + ":" + (s < 10 ? "0" : "") + s;
 		}
 	}, {
@@ -429,6 +440,15 @@ var JustAddMusic = function () {
 			} else if (key === "Left" || key === "Right") {
 				var s = (key === "Left" ? -1 : 1) * (evt.shiftKey ? 15 : 5) * (evt.altKey ? 12 : 1);
 				this.skip(s);
+			}
+		}
+	}, {
+		key: "_handleEnded",
+		value: function _handleEnded(evt) {
+			if (this.loop) {
+				this.seek(0);
+			} else if (this.onended) {
+				this.onended();
 			}
 		}
 	}, {

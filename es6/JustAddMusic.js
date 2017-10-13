@@ -33,8 +33,10 @@ class JustAddMusic {
 		this.gain = config.gain||1;
 		this.onstart = config.onstart;
 		this.ontick = config.ontick;
+		this.onended = config.onended;
 		this.onprogress = config.onprogress;
 		this.label = config.label||"";
+		this.loop = !!config.loop;
 		
 	// private properties:
 		// getter / setter values:
@@ -158,6 +160,7 @@ class JustAddMusic {
 		source.buffer = this._buffer;
 		source.connect(this._nullNode);
 		source.start(0, offset);
+		source.addEventListener("ended",(evt) => this._handleEnded(evt));
 		
 		this._playT = this._context.currentTime - offset;
 		this._paused = false;
@@ -180,13 +183,15 @@ class JustAddMusic {
 		this._pausedT = this._playT = 0;
 	}
 	
-	skip(time) {
+	seek(time) {
 		if (!this._buffer) { return; }
-		if (this._paused) { this._pausedT += time; }
-		else {
-			this._pausedT = Math.min(this._buffer.duration, Math.max(0, this._context.currentTime - this._playT + time));
-			this.play();
-		}
+		this.playT = 0;
+		this._pausedT = Math.min(this._buffer.duration-0.001, Math.max(0, time));
+		if (!this._paused) { this.play(); }
+	}
+
+	skip(time) {
+		this.seek(this._context.currentTime - this._playT + time);
 	}
 	
 	tick() {
@@ -300,7 +305,7 @@ class JustAddMusic {
 			// detect a hit:
 			let threshold = thresholds[key], m = prevO ? (t-prevO.t)/16 : 1;
 			band.hit = false;
-			if (!prevO[key].hit && Math.pow(val,1.3) > threshold*1.3) { band.hit = true; }
+			if (prevO && !prevO[key].hit && Math.pow(val,1.3) > threshold*1.3) { band.hit = true; }
 			thresholds[key] = Math.max(0.1,val,threshold-(threshold-val)*0.15*m);
 		}
 	}
@@ -367,6 +372,14 @@ class JustAddMusic {
 		} else if (key === "Left" || key === "Right") {
 			let s = (key === "Left" ? -1 : 1) * (evt.shiftKey ? 15 : 5) * (evt.altKey ? 12 : 1);
 			this.skip(s);
+		}
+	}
+
+	_handleEnded(evt) {
+		if (this.loop) {
+			this.seek(0);
+		} else if (this.onended) {
+			this.onended();
 		}
 	}
 	
