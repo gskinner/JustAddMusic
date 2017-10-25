@@ -615,9 +615,18 @@ var JustAddMusic = function () {
 	}, {
 		key: "audioData",
 		get: function get() {
-			return this._audioData[0] || { vol: 0, avg: 0, delta: 0, avgDelta: 0, t: 0 };
+			return this._audioData && this._audioData[0] || JustAddMusic.DEFAULT_AUDIO_DATA;
 		}
 	}]);
 
 	return JustAddMusic;
 }();
+
+JustAddMusic.DEFAULT_FREQUENCY_RANGE = { vol: 0, avg: 0, delta: 0, trend: 0, hit: false };
+JustAddMusic.DEFAULT_AUDIO_DATA = {
+	t: 0, spectrum: [],
+	low: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
+	mid: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
+	high: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
+	all: JustAddMusic.DEFAULT_FREQUENCY_RANGE
+};
