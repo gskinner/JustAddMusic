@@ -622,7 +622,7 @@ var JustAddMusic = function () {
 	return JustAddMusic;
 }();
 
-JustAddMusic.DEFAULT_FREQUENCY_RANGE = { vol: 0, avg: 0, delta: 0, trend: 0, hit: false };
+JustAddMusic.DEFAULT_FREQUENCY_RANGE = { val: 0, avg: 0, delta: 0, trend: 0, hit: false };
 JustAddMusic.DEFAULT_AUDIO_DATA = {
 	t: 0, spectrum: [],
 	low: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
