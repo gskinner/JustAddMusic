@@ -127,7 +127,7 @@ class JustAddMusic {
 		else { div.parentNode.removeChild(div); }
 	}
 	
-	get audioData() { return this._audioData[0]||{vol:0,avg:0,delta:0,avgDelta:0,t:0}; }
+	get audioData() { return (this._audioData && this._audioData[0])|| JustAddMusic.DEFAULT_AUDIO_DATA; }
 	
 	
 // public methods:
@@ -455,3 +455,12 @@ class JustAddMusic {
 		if (!this._paused) { this.play(); }
 	}
 }
+
+JustAddMusic.DEFAULT_FREQUENCY_RANGE = {vol:0,avg:0,delta:0,trend:0,hit:false};
+JustAddMusic.DEFAULT_AUDIO_DATA = {
+	t: 0, spectrum: [],
+	low: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
+	mid: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
+	high: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
+	all: JustAddMusic.DEFAULT_FREQUENCY_RANGE
+};
