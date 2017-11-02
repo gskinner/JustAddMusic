@@ -40,6 +40,7 @@ var JustAddMusic = function () {
 		this.gain = config.gain || 1;
 		this.onstart = config.onstart;
 		this.ontick = config.ontick;
+		this.ondecode = config.ondecode;
 		this.onended = config.onended;
 		this.onprogress = config.onprogress;
 		this.label = config.label || "";
@@ -543,6 +544,7 @@ var JustAddMusic = function () {
 			this._buffer = buffer;
 			this._pausedT = 0;
 			this._playT = this._context.currentTime;
+			this.ondecode && this.ondecode(buffer);
 			this._updateTimeUI();
 			if (!this._paused) {
 				this.play();
