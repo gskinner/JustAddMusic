@@ -135,6 +135,10 @@ class JustAddMusic {
 	// file load:
 	loadAudio(src) {
 		this.abort();
+
+		// Not paused, but no source node
+		this.disconnect();
+
 		if (!src) { return; }
 		this._updateLoadUI(0);
 		
@@ -149,6 +153,14 @@ class JustAddMusic {
 	abort() {
 		this._request&&this._request.abort();
 		this._request = null;
+	}
+
+	disconnect() {
+		if (this._sourceNode) {
+			this._sourceNode.stop();
+			this._sourceNode.disconnect();
+			this._sourceNode = null;
+		}
 	}
 	
 	// playback:
@@ -172,9 +184,7 @@ class JustAddMusic {
 	
 	pause() {
 		if (!this._sourceNode || this._paused) { return; }
-		this._sourceNode.stop();
-		this._sourceNode.disconnect();
-		this._sourceNode = null;
+		this.disconnect();
 		this._pausedT = this._context.currentTime - this._playT;
 		this._paused = true;
 	}
