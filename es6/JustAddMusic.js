@@ -30,6 +30,7 @@ class JustAddMusic {
 		this.gain = config.gain||1;
 		this.onstart = config.onstart;
 		this.ontick = config.ontick;
+		this.ondecode = config.ondecode;
 		this.onended = config.onended;
 		this.onprogress = config.onprogress;
 		this.label = config.label||"";
@@ -127,13 +128,17 @@ class JustAddMusic {
 		else { div.parentNode.removeChild(div); }
 	}
 	
-	get audioData() { return this._audioData[0]||{vol:0,avg:0,delta:0,avgDelta:0,t:0}; }
+	get audioData() { return (this._audioData && this._audioData[0])|| JustAddMusic.DEFAULT_AUDIO_DATA; }
 	
 	
 // public methods:
 	// file load:
 	loadAudio(src) {
 		this.abort();
+
+		// Not paused, but no source node
+		this.disconnect();
+
 		if (!src) { return; }
 		this._updateLoadUI(0);
 		
@@ -148,6 +153,14 @@ class JustAddMusic {
 	abort() {
 		this._request&&this._request.abort();
 		this._request = null;
+	}
+
+	disconnect() {
+		if (this._sourceNode) {
+			this._sourceNode.stop();
+			this._sourceNode.disconnect();
+			this._sourceNode = null;
+		}
 	}
 	
 	// playback:
@@ -171,9 +184,7 @@ class JustAddMusic {
 	
 	pause() {
 		if (!this._sourceNode || this._paused) { return; }
-		this._sourceNode.stop();
-		this._sourceNode.disconnect();
-		this._sourceNode = null;
+		this.disconnect();
 		this._pausedT = this._context.currentTime - this._playT;
 		this._paused = true;
 	}
@@ -451,7 +462,17 @@ class JustAddMusic {
 		this._buffer = buffer;
 		this._pausedT = 0;
 		this._playT = this._context.currentTime;
+		this.ondecode && this.ondecode(buffer);
 		this._updateTimeUI();
 		if (!this._paused) { this.play(); }
 	}
 }
+
+JustAddMusic.DEFAULT_FREQUENCY_RANGE = {val:0,avg:0,delta:0,trend:0,hit:false};
+JustAddMusic.DEFAULT_AUDIO_DATA = {
+	t: 0, spectrum: [],
+	low: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
+	mid: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
+	high: JustAddMusic.DEFAULT_FREQUENCY_RANGE,
+	all: JustAddMusic.DEFAULT_FREQUENCY_RANGE
+};
