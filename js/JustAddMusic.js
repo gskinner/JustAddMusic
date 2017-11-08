@@ -112,6 +112,10 @@ var JustAddMusic = function () {
 		// file load:
 		value: function loadAudio(src) {
 			this.abort();
+
+			// Not paused, but no source node
+			this.disconnect();
+
 			if (!src) {
 				return;
 			}
@@ -129,6 +133,15 @@ var JustAddMusic = function () {
 		value: function abort() {
 			this._request && this._request.abort();
 			this._request = null;
+		}
+	}, {
+		key: "disconnect",
+		value: function disconnect() {
+			if (this._sourceNode) {
+				this._sourceNode.stop();
+				this._sourceNode.disconnect();
+				this._sourceNode = null;
+			}
 		}
 
 		// playback:
@@ -162,9 +175,7 @@ var JustAddMusic = function () {
 			if (!this._sourceNode || this._paused) {
 				return;
 			}
-			this._sourceNode.stop();
-			this._sourceNode.disconnect();
-			this._sourceNode = null;
+			this.disconnect();
 			this._pausedT = this._context.currentTime - this._playT;
 			this._paused = true;
 		}
