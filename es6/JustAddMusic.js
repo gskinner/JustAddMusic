@@ -158,9 +158,9 @@ class JustAddMusic {
 
 	disconnect() {
 		if (this._sourceNode) {
+			this._sourceNode.removeEventListener("ended", this._bound_handleEnded);
 			this._sourceNode.stop();
 			this._sourceNode.disconnect();
-			this._sourceNode.removeEventListener("ended", this._bound_handleEnded);
 			this._sourceNode = null;
 		}
 	}
