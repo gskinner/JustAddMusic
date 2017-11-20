@@ -77,6 +77,7 @@ class JustAddMusic {
 		
 		// method proxies:
 		this._bound_handleKeyDown = this._handleKeyDown.bind(this);
+		this._bound_handleEnded = evt => this._handleEnded(evt)
 		
 		// init:
 		this._initAudio();
@@ -159,6 +160,7 @@ class JustAddMusic {
 		if (this._sourceNode) {
 			this._sourceNode.stop();
 			this._sourceNode.disconnect();
+			this._sourceNode.removeEventListener("ended", this._bound_handleEnded);
 			this._sourceNode = null;
 		}
 	}
@@ -174,7 +176,7 @@ class JustAddMusic {
 		source.buffer = this._buffer;
 		source.connect(this._nullNode);
 		source.start(0, offset);
-		source.addEventListener("ended",(evt) => this._handleEnded(evt));
+		source.addEventListener("ended", this._bound_handleEnded);
 		
 		this._playT = this._context.currentTime - offset;
 		this._paused = false;
