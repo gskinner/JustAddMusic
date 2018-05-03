@@ -76,7 +76,8 @@ class JustAddMusic {
 		this._analyserNode = null;
 		
 		// method proxies:
-		this._bound_handleKeyDown = this._handleKeyDown.bind(this);
+		this._bound_handleKeyDown = evt => this._handleKeyDown(evt);
+		this._bound_handleEnded = evt => this._handleEnded(evt)
 		
 		// init:
 		this._initAudio();
@@ -110,7 +111,7 @@ class JustAddMusic {
 	get tickInterval() { return this._tickInterval; }
 	set tickInterval(val=16) {
 		clearInterval(this._tickIntervalID);
-		this._tickIntervalID = (val > 0) ? setInterval(this.tick.bind(this), val) : 0;
+		this._tickIntervalID = (val > 0) ? setInterval(evt => this.tick(evt), val) : 0;
 	}
 	
 	get volume() { return this._gainNode.gain.value; }
@@ -145,8 +146,8 @@ class JustAddMusic {
 		let request = this._request = new XMLHttpRequest();
 		request.open('GET', src, true);
 		request.responseType = 'arraybuffer';
-		request.addEventListener("load", this._handleURILoad.bind(this));
-		request.addEventListener("progress", this._handleURIProgress.bind(this));
+		request.addEventListener("load", evt => this._handleURILoad(evt));
+		request.addEventListener("progress", evt => this._handleURIProgress(evt));
 		request.send();
 	}
 	
@@ -157,6 +158,7 @@ class JustAddMusic {
 
 	disconnect() {
 		if (this._sourceNode) {
+			this._sourceNode.removeEventListener("ended", this._bound_handleEnded);
 			this._sourceNode.stop();
 			this._sourceNode.disconnect();
 			this._sourceNode = null;
@@ -174,7 +176,7 @@ class JustAddMusic {
 		source.buffer = this._buffer;
 		source.connect(this._nullNode);
 		source.start(0, offset);
-		source.addEventListener("ended",(evt) => this._handleEnded(evt));
+		source.addEventListener("ended", this._bound_handleEnded);
 		
 		this._playT = this._context.currentTime - offset;
 		this._paused = false;
@@ -350,15 +352,15 @@ class JustAddMusic {
 		if (target === undefined) { target = window; }
 		if (typeof target === "string") { target = document.querySelector(target); }
 		if (!target) { return; }
-		target.addEventListener("drop", this._handleDrop.bind(this));
-		target.addEventListener("dragenter", this._handleDragEnter.bind(this));
-		target.addEventListener("dragleave", this._handleDragLeave.bind(this));
-		target.addEventListener("dragover", this._handleDragOver.bind(this));
+		target.addEventListener("drop", evt => this._handleDrop(evt));
+		target.addEventListener("dragenter", evt => this._handleDragEnter(evt));
+		target.addEventListener("dragleave", evt => this._handleDragLeave(evt));
+		target.addEventListener("dragover", evt => this._handleDragOver(evt));
 		this._updateUI("drop an MP3 to play");
 	}
 	
 	_decode(data) {
-		this._context.decodeAudioData(data, this._handleBufferDecode.bind(this));
+		this._context.decodeAudioData(data, evt => this._handleBufferDecode(evt));
 		this._updateUI("decoding...");
 	}
 
@@ -439,7 +441,7 @@ class JustAddMusic {
 		this._handleDragLeave(evt);
 		this.abort();
 		let reader = new FileReader();
-		reader.addEventListener('load', this._handleDropLoad.bind(this));
+		reader.addEventListener('load', evt => this._handleDropLoad(evt));
 		reader.readAsArrayBuffer(evt.dataTransfer.files[0]);
 	}
 	
